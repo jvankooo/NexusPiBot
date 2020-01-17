@@ -81,7 +81,7 @@ while(True):
 	_, contours, _ = cv2.findContours(cal_frame_thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 	
 
-	circles = cv2.HoughCircles(cal_frame, cv2.HOUGH_GRADIENT, 1.2, 100)
+	circles = cv2.HoughCircles(cal_frame_thresh, cv2.HOUGH_GRADIENT, 1.2, 100)
 
 	closest_traingle_dis = pow(10, 9)
 	closest_quadrilateral_dis = pow(10, 9)
@@ -92,16 +92,16 @@ while(True):
 		y = approx.ravel()[1]
 
 		if len(approx) == 3:
-			M = cv2.moments(c)
+			M = cv2.moments(cal_frame_thresh)
 			cX = int(M["m10"] / M["m00"])
 			cY = int(M["m01"] / M["m00"])
 			closest_traingle_dis = min(closest_traingle_dis, math.sqrt(math.pow(cX - my_origin[0], 2) + math.pow(cY - my_origin[1], 2)))
 
 		elif len(approx) == 4:    #or 5 maybe
-			M = cv2.moments(c)
+			M = cv2.moments(cal_frame_thresh)
 			cX = int(M["m10"] / M["m00"])
 			cY = int(M["m01"] / M["m00"])
-			closest_quadrilateral_dis = min(closest_quadrilateral_dis, math.sqrt(math.pow(cX - my_origin[0], 2) + math.pow(cY - my_origin, 2)))
+			closest_quadrilateral_dis = min(closest_quadrilateral_dis, math.sqrt(math.pow(cX - my_origin[0], 2) + math.pow(cY - my_origin[1], 2)))
 
 
 	my_origin = (cal_frame.shape[0] - 1, cal_frame.shape[1]/2)
