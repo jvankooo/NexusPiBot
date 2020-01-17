@@ -69,8 +69,8 @@ while(True):
 
 	ret, frame = cam.read()
 	# Apply Prespective Transform
-	cal_frame = frame
-	# cal_frame = cv2.warpPerspective(frame, h, (frame.shape[1], frame.shape[0]))
+	# cal_frame = frame
+	cal_frame = cv2.warpPerspective(frame, h, (frame.shape[1], frame.shape[0]))
 
 	# Re-Calibration
 	if cv2.waitKey(1) & 0xFF == ord('c'):
@@ -84,23 +84,25 @@ while(True):
 
 	if cv2.waitKey(1) & 0xFF == ord('q'):
 		break
-	cal_frame_gray = cv2.cvtColor(cal_frame, cv2.COLOR_BGR2GRAY)
-	cal_frame_blur = cv2.GaussianBlur(cal_frame_gray, (5, 5), 0)
-	cal_frame_thresh = cv2.adaptiveThreshold(cal_frame_blur, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2)
+	cal_frame_process = cv2.cvtColor(cal_frame, cv2.COLOR_BGR2GRAY)
+	cal_frame_process = cv2.GaussianBlur(cal_frame_process, (5, 5), 0)
+	cal_frame_process = cv2.adaptiveThreshold(cal_frame_process, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2)
 	grad_x = cv2.getTrackbarPos("Grad_X", "Edge Detector")
 	grad_y = cv2.getTrackbarPos("Grad_Y", "Edge Detector")
-	cal_frame_edges = cv2.Canny(cal_frame_thresh, grad_x, grad_y)
-	contours,_= cv2.findContours(cal_frame_edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+	cal_frame_process = cv2.Canny(cal_frame_process, grad_x, grad_y)
+	contours,_= cv2.findContours(cal_frame_process, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 	
-	cv2.imshow("Edge Detector", cal_frame_edges)
-	circles = cv2.HoughCircles(cal_frame_thresh, cv2.HOUGH_GRADIENT, 1.2, minDist = 1 + cv2.getTrackbarPos("Min dist", "Shape Selection"),minRadius = 1 + int(math.sqrt(cv2.getTrackbarPos("Circle Area", "Shape Selection"))))
+	cv2.imshow("Edge Detector", cal_frame_process)
+	circles = cv2.HoughCircles(cal_frame_process, cv2.HOUGH_GRADIENT, 1.2, minDist = 1 + cv2.getTrackbarPos("Min dist", "Shape Selection"),minRadius = 1 + int(math.sqrt(cv2.getTrackbarPos("Circle Area", "Shape Selection"))))
 
 
-	my_origin = (cal_frame.shape[0] - 1, cal_frame.shape[1]/2)
+	my_origin = (int(cal_frame.shape[1]/2), cal_frame.shape[0] - 1)
+	print(cal_frame.shape, frame.shape)
 
 	closest_traingle_dis = pow(10, 9)
 	closest_quadrilateral_dis = pow(10, 9)
-	triangle_centre = None
+	triangle_centre = (0, 0)
+	quadrilateral_centre = (0, 0)
 	for cnt in contours:
 		approx = cv2.approxPolyDP(cnt, 0.01*cv2.arcLength(cnt, True), True)
 		# cv2.drawContours(cal_frame_gray, [approx], 0, (0), 5)
@@ -117,7 +119,7 @@ while(True):
 			cX = rect_centroid[0]
 			cY = rect_centroid[1]
 			if math.sqrt(math.pow(cX - my_origin[0], 2) + math.pow(cY - my_origin[1], 2)) < closest_traingle_dis:
-				triangle_centre = (cX, cY)
+				triangle_centre = (int(cX), int(cY))
 				closest_traingle_dis = math.sqrt(math.pow(cX - my_origin[0], 2) + math.pow(cY - my_origin[1], 2))
 			# cv2.drawContours(cal_frame, [approx], 0, (0), 5)
 			# M = cv2.moments(cal_frame_thresh)
@@ -136,7 +138,7 @@ while(True):
 				cX = rect_centroid[0]
 				cY = rect_centroid[1]
 				if math.sqrt(math.pow(cX - my_origin[0], 2) + math.pow(cY - my_origin[1], 2)) < closest_quadrilateral_dis:
-					quadrilateral_centre = (cX, cY)
+					quadrilateral_centre = (int(cX),int(cY))
 					closest_quadrilateral_dis = math.sqrt(math.pow(cX - my_origin[0], 2) + math.pow(cY - my_origin[1], 2))
 				# closest_quadrilateral_dis = min(closest_quadrilateral_dis, math.sqrt(math.pow(cX - my_origin[0], 2) + math.pow(cY - my_origin[1], 2)))
 
@@ -156,6 +158,7 @@ while(True):
 		if closest_dis < closest_traingle_dis and closest_dis < closest_quadrilateral_dis:
 			if closest_circle != None:
 				direction = np.arctan2(my_origin[0] - closest_circle[0], closest_circle[1] - my_origin[1])
+				cv2.line(cal_frame, my_origin, (int(closest_circle[0]),int(closest_circle[1])), (0, 255, 255), 3)
 				if direction > 7 * np.pi/12:
 					print("Move Left")
 				elif direction < 5*np.pi/12:
@@ -163,18 +166,20 @@ while(True):
 				else:
 					print("Move Straight")
 		elif closest_traingle_dis < closest_quadrilateral_dis:
+			cv2.line(cal_frame, my_origin, triangle_centre, (0, 255, 255), 3)
 			print("Move Left")
 		elif closest_traingle_dis > closest_quadrilateral_dis:
+			cv2.line(cal_frame, my_origin, quadrilateral_centre, (0, 255, 255),3)
 			print("Move Right")
 		else:
 			print("STOP")
 	else:
 		if closest_traingle_dis < closest_quadrilateral_dis:
+			cv2.line(cal_frame, my_origin, triangle_centre, (0, 255, 255), 3)
 			print("Move Left")
 		elif closest_traingle_dis > closest_quadrilateral_dis:
+			cv2.line(cal_frame, my_origin, quadrilateral_centre, (0, 255, 255),3)
 			print("Move Right")
-		else:
-			print("STOP")
 
 
 	# Display Window
